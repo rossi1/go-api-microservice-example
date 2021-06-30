@@ -105,7 +105,6 @@ func (c *categoryRepo) Find(id uuid.UUID) (*entity.Category, error) {
 		log.Println(err.Error())
 		return nil, ErrNotFound
 	}
-	fmt.Println(category)
 	return &category, nil
 }
 
@@ -153,25 +152,9 @@ func (p *productRepo) Create(product entity.Product, categoryID uuid.UUID) (*ent
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
-
-	tx := p.db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	if err := tx.Error; err != nil {
-		return nil, err
-	}
-
-	category.Products = []entity.Product{product}
-	if err = tx.Save(&category).Error; err != nil {
-		return nil, err
-	}
-
 	product.CategoryID = category.ID
-	if err = tx.Create(&product).Error; err != nil {
+
+	if err = p.db.Create(&product).Error; err != nil {
 		return nil, err
 	}
 
@@ -193,7 +176,7 @@ func (p *productRepo) Find(id uuid.UUID) (*entity.Product, error) {
 	err := p.db.First(&product, "id = ?", id).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Println(err.Error())
-		return nil, ErrFetch
+		return nil, ErrNotFound
 	}
 	return &product, nil
 
@@ -202,40 +185,41 @@ func (p *productRepo) Find(id uuid.UUID) (*entity.Product, error) {
 func (p *productRepo) Update(id uuid.UUID, params map[string]interface{}) (*entity.Product, error) {
 	var product entity.Product
 
-	err := p.db.Model(&product).Where("id = ?", id).Error
-	if err != nil {
+	err := p.db.First(&product, "id = ?", id).Error
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Println(err.Error())
-		return nil, ErrUpdate
+		return nil, ErrNotFound
 	}
-	if name := params["name"].(string); name != "" {
+
+	if name, ok := params["name"].(string); ok {
 		product.Name = name
 	}
 
-	if tax := params["tax"].(*string); tax != nil {
+	if tax, ok := params["tax"].(*string); ok {
 		product.Tax = tax
 	}
 
-	if description := params["description"].(*string); description != nil {
+	if description, ok := params["description"].(*string); ok {
 		product.Description = description
 	}
 
-	if weight := params["weight"].(*string); weight != nil {
+	if weight, ok := params["weight"].(*string); ok {
 		product.Weight = weight
 	}
 
-	if expires := params["expires"].(*time.Time); expires != nil {
+	if expires, ok := params["expires"].(*time.Time); ok {
 		product.Expires = expires
 	}
 
-	if barcode := params["barcode"].(*string); barcode != nil {
+	if barcode, ok := params["barcode"].(*string); ok {
 		product.BarCode = barcode
 	}
 
-	if discount := params["discount"].(*string); discount != nil {
+	if discount, ok := params["discount"].(*string); ok {
 		product.Discount = discount
 	}
 
-	if image := params["image"].(*string); image != nil {
+	if image, ok := params["image"].(*string); ok {
 		product.Image = image
 	}
 	p.db.Save(&product)

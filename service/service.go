@@ -105,8 +105,17 @@ func (s *Service) DeleteCategory(categoryID string) error {
 
 }
 
-func (s *Service) CreateProduct() error {
-	return nil
+func (s *Service) CreateProduct(product entity.Product, categoryID string) (*entity.Product, error) {
+	id, err := uuid.FromString(categoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := s.prodRepo.Create(product, id)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s *Service) UpdateProduct(productID string, params map[string]interface{}) (*entity.Product, error) {

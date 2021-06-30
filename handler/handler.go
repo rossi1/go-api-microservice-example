@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"github/rossi1/go-api-microservice-example/domain/entity"
 	"github/rossi1/go-api-microservice-example/service"
 	"net/http"
@@ -22,7 +21,7 @@ type Service interface {
 	DeleteCategory(categoryID string) error
 	UpdateCategory(name, categoryID string) (*entity.Category, error)
 	GetCategory(categoryID string) (*entity.Category, error)
-	CreateProduct() error
+	CreateProduct(product entity.Product, categoryID string) (*entity.Product, error)
 	GetAllCategories(r *http.Request) ([]entity.Category, error)
 	DeleteProduct(productID string) error
 	GetProduct(productID string) (*entity.Product, error)
@@ -123,7 +122,7 @@ func (h *Handler) createCategoryAPIView(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) updateCategoryAPIView(w http.ResponseWriter, r *http.Request) {
-	categoryID := chi.URLParam(r, "categoryID")
+	categoryID := chi.URLParam(r, "categoryId")
 
 	var req CategorySerializer
 
@@ -179,7 +178,7 @@ func (h *Handler) getProductAPIView(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.GetProduct(productID)
 	if err != nil {
-		ErrorResponse(w, err.Error(), 400)
+		ErrorResponse(w, err.Error(), 404)
 		return
 	}
 	Response(w, SuccessResponse{
@@ -189,19 +188,21 @@ func (h *Handler) getProductAPIView(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createProductAPIView(w http.ResponseWriter, r *http.Request) {
+
+	categoryID := chi.URLParam(r, "categoryId")
+
 	var (
-		req ProductSerializer
-		//product entity.Product
+		product entity.Product
 	)
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
 		ErrorResponse(w, err.Error(), 400)
 		return
 	}
 
 	defer r.Body.Close()
 
-	result, err := "kj", errors.New("f")
+	result, err := h.CreateProduct(product, categoryID)
 
 	if err != nil {
 		ErrorResponse(w, err.Error(), 500)
@@ -214,7 +215,7 @@ func (h *Handler) createProductAPIView(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) updateProductAPIView(w http.ResponseWriter, r *http.Request) {
-	productID := chi.URLParam(r, "producID")
+	productID := chi.URLParam(r, "productId")
 
 	var (
 		req ProductSerializer

@@ -57,11 +57,11 @@ func (h *Handler) GetRouter() http.Handler {
 			r.Delete("/", h.deleteCategoryAPIView)
 			r.Put("/", h.updateCategoryAPIView)
 			r.Route("/products", func(r chi.Router) {
-				r.Post("/", nil)
+				r.Post("/", h.createProductAPIView)
 				r.Get("/", h.getAllProductsAPIView)
 				r.Route("/{productId}", func(r chi.Router) {
 					r.Delete("/", h.deleteProductAPIView)
-					r.Put("/", h.getProductAPIView)
+					r.Put("/", h.updateProductAPIView)
 					r.Get("/", h.getProductAPIView)
 				})
 			})
