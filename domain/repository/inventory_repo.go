@@ -69,7 +69,7 @@ type PubRepository interface {
 
 type categoryRepo struct {
 	db *gorm.DB
-	//search   SearchRepository
+	SearchRepository
 	//producer PubRepository
 }
 
@@ -100,7 +100,9 @@ func (c *categoryRepo) Delete(id uuid.UUID) error {
 
 func (c *categoryRepo) Find(id uuid.UUID) (*entity.Category, error) {
 	var category entity.Category
-	err := c.db.Preload("Products").First(&category, "id = ?", id).Error
+	err := c.db.Preload("Products", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at DESC").Limit(5)
+	}).First(&category, "id = ?", id).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Println(err.Error())
 		return nil, ErrNotFound
@@ -127,7 +129,9 @@ func (c *categoryRepo) Update(id uuid.UUID, name string) (*entity.Category, erro
 
 func (c *categoryRepo) FindAll(r *http.Request) ([]entity.Category, error) {
 	var categories []entity.Category
-	err := c.db.Scopes(Paginate(r)).Preload("Products").Find(&categories).Error
+	err := c.db.Scopes(Paginate(r)).Preload("Products", func(db *gorm.DB) *gorm.DB {
+		return db.Limit(5)
+	}).Find(&categories).Order("created_at DESC").Error
 	if err != nil {
 		log.Println(err.Error())
 		return nil, ErrFetch
@@ -136,13 +140,13 @@ func (c *categoryRepo) FindAll(r *http.Request) ([]entity.Category, error) {
 
 }
 
-func NewCategoryRepo(db *gorm.DB) CategoryRepository {
-	return &categoryRepo{db: db}
+func NewCategoryRepo(db *gorm.DB, search search.Searcher) CategoryRepository {
+	return &categoryRepo{db, search}
 }
 
 type productRepo struct {
 	db *gorm.DB
-	//search   SearchRepository
+	SearchRepository
 	//producer PubRepository
 }
 
@@ -237,6 +241,6 @@ func (c *productRepo) FindAll(id uuid.UUID, r *http.Request) ([]entity.Product, 
 
 }
 
-func NewProductRepo(db *gorm.DB) ProductRepository {
-	return &productRepo{db: db}
+func NewProductRepo(db *gorm.DB, search search.Searcher) ProductRepository {
+	return &productRepo{db, search}
 }

@@ -4,14 +4,13 @@ import (
 
 	//"github.com/confluentinc/confluent-kafka-go/kafka"
 
-	"fmt"
 	"github/rossi1/go-api-microservice-example/domain/entity"
 	"github/rossi1/go-api-microservice-example/domain/repository"
 	"github/rossi1/go-api-microservice-example/internal/search"
 	"net/http"
 
 	"github.com/gofrs/uuid"
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v6"
 	"gorm.io/gorm"
 )
 
@@ -30,21 +29,19 @@ func New(db *gorm.DB, search interface{}, pub interface{}, topic string) *Servic
 	//case *kafka.Producer:
 	//	producer = publisher.NewKaftaPublisher(pub, topic)
 	//}
-	//client := getSearcher(search)
+	searcher := getSearcher(search)
 	//fmt.Printf("type = %T\n", client)
-	service.catRepo = repository.NewCategoryRepo(db)
-	service.prodRepo = repository.NewProductRepo(db)
+	service.catRepo = repository.NewCategoryRepo(db, searcher)
+	service.prodRepo = repository.NewProductRepo(db, searcher)
 
 	return &service
 }
 
 func getSearcher(s interface{}) search.Searcher {
-	switch s := s.(type) {
+	switch searcher := s.(type) {
 	case *elastic.Client:
-		fmt.Println("testing sake here", s)
-		return nil //search.NewElasticSearcher(s)
+		return search.NewElasticSearcher(searcher)
 	default:
-		fmt.Println("no+")
 		return nil
 	}
 }

@@ -31,14 +31,6 @@ func (c *Category) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
-// Updating data in same transaction
-func (c *Category) AfterDelete(tx *gorm.DB) (err error) {
-
-	//
-	//Find(&category).Error
-	return
-}
-
 type Product struct {
 	Base
 	Name        string         `gorm:"size:200;name;unique" json:"name" validate:"email" message:"email is invalid"`

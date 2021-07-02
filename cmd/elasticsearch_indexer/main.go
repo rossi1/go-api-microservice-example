@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github/rossi1/go-api-microservice-example/cmd/internal"
+	"github/rossi1/go-api-microservice-example/domain/entity"
 	"log"
 	"os"
 
 	"github.com/olivere/elastic/v6"
 	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
 const mappings = `{
@@ -101,7 +103,7 @@ const mappings = `{
  }
 }`
 
-func Execute(ctx context.Context, es *elastic.Client) (string, error) {
+func Execute(ctx context.Context, es *elastic.Client, db *gorm.DB) (string, error) {
 
 	// CMD for the program
 	var CMD = &cobra.Command{
@@ -128,9 +130,17 @@ func Execute(ctx context.Context, es *elastic.Client) (string, error) {
 		return "", err
 	}
 
+	bulkIndexCMD, err := bulkIndexCmd(es, db)
+
+	if err != nil {
+		return "", err
+	}
+
 	CMD.AddCommand(createIndexCMD)
 	CMD.AddCommand(destroyIndexCMD)
 	CMD.AddCommand(verifyIndexCMD)
+	CMD.AddCommand(bulkIndexCMD)
+
 	if err := CMD.ExecuteContext(ctx); err != nil {
 		return "", err
 	}
@@ -165,6 +175,23 @@ func deleteIndexCmd(es *elastic.Client) (*cobra.Command, error) {
 		if err := deleteIndex(cmd.Context(), es); err != nil {
 			return err
 		}
+		return nil
+	}
+	return startCmd, nil
+
+}
+
+func bulkIndexCmd(es *elastic.Client, db *gorm.DB) (*cobra.Command, error) {
+	var startCmd = &cobra.Command{
+		Use:   "upload",
+		Short: "upload indexes",
+	}
+
+	startCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if err := bulkIndex(cmd.Context(), es, db); err != nil {
+			return err
+		}
+
 		return nil
 	}
 	return startCmd, nil
@@ -232,6 +259,31 @@ func indexExists(ctx context.Context, client *elastic.Client) error {
 
 }
 
+func bulkIndex(ctx context.Context, client *elastic.Client, db *gorm.DB) error {
+	var categories []entity.Category
+	indexes := []elastic.BulkableRequest{}
+
+	err := db.Preload("Products").Find(&categories).Error
+	if err != nil {
+		return err
+	}
+
+	for _, data := range categories {
+		indexes = append(indexes, elastic.NewBulkIndexRequest().Index("inventories").Type("_doc").Id(data.ID.String()).Doc(categories))
+	}
+
+	bulkRequest, err := client.Bulk().Add(indexes...).Pretty(true).Do(ctx)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	created := bulkRequest.Created()
+	fmt.Println(created)
+
+	return nil
+}
+
 func main() {
 	ctx := context.Background()
 
@@ -239,6 +291,13 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("config error: %s", err)
+		os.Exit(1)
+	}
+
+	db, err := internal.NewPostgreSQL(cfg)
+
+	if err != nil {
+		log.Fatalf("db error: %s", err)
 		os.Exit(1)
 	}
 
@@ -256,7 +315,7 @@ func main() {
 
 	fmt.Printf("Elasticsearch returned with code %d and version %s\n", code, info.Version.Number)
 
-	msg, err := Execute(ctx, es)
+	msg, err := Execute(ctx, es, db)
 	if err != nil {
 		log.Fatal(err.Error())
 		os.Exit(1)
