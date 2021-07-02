@@ -22,6 +22,7 @@ require (
 	github.com/olivere/elastic/v6 v6.2.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sethvargo/go-envconfig v0.3.5 // indirect
+	github.com/spf13/cobra v1.2.0 // indirect
 	github.com/swaggo/http-swagger v1.0.0 // indirect
 	github.com/swaggo/swag v1.7.0 // indirect
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect

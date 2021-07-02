@@ -38,7 +38,6 @@ func main() {
 	ctx := context.Background()
 
 	cfg, err := internal.GetConfig(ctx)
-	fmt.Println(cfg.ENVIRONMENT)
 
 	if err != nil {
 		log.Fatalf("config error: %s", err)
