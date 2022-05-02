@@ -66,7 +66,7 @@ func main() {
 	db, err := internal.NewPostgreSQL(cfg)
 
 	if err != nil {
-		log.Fatalf("db error: %s", err)
+		log.Fatalf("db error logging: %s", err)
 		os.Exit(1)
 	}
 
